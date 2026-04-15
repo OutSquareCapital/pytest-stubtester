@@ -36,10 +36,19 @@ class Parsed(NamedTuple):
             tuple[str, doctest.DocTest]: A tuple of the test name and the corresponding doctest object.
 
         """
+
+        def _extract_markdown_code_blocks() -> str:
+            return (
+                pc
+                .Iter(MARKDOWN_BLOCK.findall(self.docstring))
+                .then(lambda m: m.join("\n"))
+                .unwrap_or(self.docstring)
+            )
+
         return (
             self.name,
             doctest.DocTestParser().get_doctest(
-                _extract_markdown_code_blocks(self.docstring),
+                _extract_markdown_code_blocks(),
                 globs={},
                 name=self.name,
                 filename=str(path),
@@ -59,8 +68,39 @@ class PyiModule(pytest.Module):
             Iterator[pytest.Item]: An iterator of pytest items to be executed.
 
         """
+
+        def _extract_doctests_from_ast() -> pc.Iter[Parsed]:
+            try:
+                tree_res = pc.Ok(
+                    ast.parse(
+                        self.path.read_text(encoding="utf-8"),
+                        filename=str(self.path),
+                    )
+                )
+            except SyntaxError:
+                tree_res = pc.Err(None)
+
+            match tree_res:
+                case pc.Ok(tree):
+                    module_doc = _get_doc(tree)
+                    module_tests = (
+                        pc.Iter.once(Parsed(self.path.stem, module_doc.unwrap(), 1))
+                        if module_doc.is_some()
+                        else pc.Iter[Parsed].new()
+                    )
+
+                    return module_tests.chain(
+                        pc
+                        .Iter(tree.body)
+                        .filter(_is_def)
+                        .flat_map(_recurse_extract)
+                        .map_star(Parsed)
+                    )
+                case _:
+                    return pc.Iter[Parsed].new()
+
         return (
-            _extract_doctests_from_ast(self.path)
+            _extract_doctests_from_ast()
             .map(lambda parsed: parsed.to_doctest(self.path))
             .filter_star(lambda _, test: bool(test.examples))
             .map_star(
@@ -103,61 +143,18 @@ def pytest_collect_file(
         PyiModule | None: PyiModule instance if .pyi file and enabled, None otherwise.
 
     """
-    if not parent.config.getoption(COMMAND):
-        return None
-
-    if file_path.suffix.lower() != ".pyi":
+    if not parent.config.getoption(COMMAND) or file_path.suffix.lower() != ".pyi":
         return None
 
     return PyiModule.from_parent(parent=parent, path=file_path)  # pyright: ignore[reportUnknownMemberType]
 
 
-def _extract_doctests_from_ast(file_path: Path) -> pc.Iter[Parsed]:
-    tree = _get_tree(file_path)
-    if tree.is_err():
-        return pc.Iter[Parsed].new()
-
-    module_docstring = ast.get_docstring(tree.unwrap())
-    module_tests = (
-        pc.Iter.once(Parsed(file_path.stem, module_docstring, 1))
-        if module_docstring and ">>>" in module_docstring
-        else pc.Iter[Parsed].new()
-    )
-
-    return module_tests.chain(
-        pc
-        .Iter(tree.unwrap().body)
-        .filter(_is_def)
-        .flat_map(_recurse_extract)
-        .map_star(Parsed)
-    )
-
-
-def _get_tree(file_path: Path) -> pc.Result[ast.Module, None]:
-    try:
-        return pc.Ok(
-            ast.parse(file_path.read_text(encoding="utf-8"), filename=str(file_path))
-        )
-    except SyntaxError:
-        return pc.Err(None)
-
-
-def _extract_markdown_code_blocks(docstring: str) -> str:
-    return (
-        pc
-        .Iter(MARKDOWN_BLOCK.findall(docstring))
-        .then_some()
-        .map(lambda m: m.join("\n"))
-        .unwrap_or(docstring)
-    )
-
-
 def _recurse_extract(node: IsDef, prefix: str = "") -> Iterator[tuple[str, str, int]]:
-    docstring = ast.get_docstring(node)
+    docstring = _get_doc(node)
     full_name = f"{prefix}{node.name}" if prefix else node.name
 
-    if docstring and ">>>" in docstring:
-        yield (full_name, docstring, node.lineno)
+    if docstring.is_some():
+        yield (full_name, docstring.unwrap(), node.lineno)
     if isinstance(node, ast.ClassDef):
         yield from (
             pc
@@ -184,3 +181,7 @@ def _run_doctest(dtest: doctest.DocTest) -> None:
 
 def _is_def(n: object) -> TypeIs[IsDef]:
     return isinstance(n, ast.FunctionDef | ast.ClassDef)
+
+
+def _get_doc(node: ast.FunctionDef | ast.ClassDef | ast.Module) -> pc.Option[str]:
+    return pc.Option(ast.get_docstring(node)).filter(lambda d: ">>>" in d)
