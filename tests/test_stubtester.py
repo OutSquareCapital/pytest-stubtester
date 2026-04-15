@@ -26,7 +26,7 @@ def test_pyi_module_class_exists() -> None:
 
 def test_plugin_disabled_by_default(pytester: pytest.Pytester) -> None:
     """Plugin should not collect .pyi files when disabled."""
-    pytester.makefile(
+    _ = pytester.makefile(
         ".pyi",
         test_sample="""
 def add(a: int, b: int) -> int:
@@ -43,7 +43,7 @@ def add(a: int, b: int) -> int:
 
 def test_plugin_enabled_collects_pyi(pytester: pytest.Pytester) -> None:
     """Plugin should collect .pyi files when enabled."""
-    pytester.makefile(
+    _ = pytester.makefile(
         ".pyi",
         test_sample="""
 def add(a: int, b: int) -> int:
@@ -63,7 +63,7 @@ def add(a: int, b: int) -> int:
 
 def test_passing_doctests(pytester: pytest.Pytester) -> None:
     """Valid doctests should pass."""
-    pytester.makefile(
+    _ = pytester.makefile(
         ".pyi",
         passing="""
 def multiply(a: int, b: int) -> int:
@@ -84,7 +84,7 @@ def multiply(a: int, b: int) -> int:
 
 def test_failing_doctests(pytester: pytest.Pytester) -> None:
     """Invalid doctests should fail."""
-    pytester.makefile(
+    _ = pytester.makefile(
         ".pyi",
         failing="""
 def add(a: int, b: int) -> int:
@@ -103,7 +103,7 @@ def add(a: int, b: int) -> int:
 
 def test_multiple_doctests_in_file(pytester: pytest.Pytester) -> None:
     """Multiple doctests in one file should all be collected."""
-    pytester.makefile(
+    _ = pytester.makefile(
         ".pyi",
         multi="""
 def add(a: int, b: int) -> int:
@@ -130,7 +130,7 @@ def sub(a: int, b: int) -> int:
 
 def test_non_pyi_files_ignored(pytester: pytest.Pytester) -> None:
     """Non-.pyi files should be ignored even with plugin enabled."""
-    pytester.makefile(
+    _ = pytester.makefile(
         ".txt",
         readme="""
 >>> 1 + 1
@@ -145,7 +145,7 @@ def test_non_pyi_files_ignored(pytester: pytest.Pytester) -> None:
 
 def test_empty_pyi_file(pytester: pytest.Pytester) -> None:
     """Empty .pyi file should not cause errors."""
-    pytester.makefile(".pyi", empty="")
+    _ = pytester.makefile(".pyi", empty="")
 
     result = pytester.runpytest(pst.COMMAND, "-v")
     # Should complete without errors, just no tests collected from this file
@@ -154,7 +154,7 @@ def test_empty_pyi_file(pytester: pytest.Pytester) -> None:
 
 def test_pyi_file_without_doctests(pytester: pytest.Pytester) -> None:
     """.pyi file without doctests should not collect any tests."""
-    pytester.makefile(
+    _ = pytester.makefile(
         ".pyi",
         no_doctests="""
 def function_without_docstring(x: int) -> int: ...

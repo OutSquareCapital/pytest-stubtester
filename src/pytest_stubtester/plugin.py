@@ -6,7 +6,7 @@ import re
 from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
-from typing import NamedTuple, TypeIs
+from typing import NamedTuple, TypeIs, override
 
 import pyochain as pc
 import pytest
@@ -27,7 +27,15 @@ class Parsed(NamedTuple):
     """Line number in the source file."""
 
     def to_doctest(self, path: Path) -> tuple[str, doctest.DocTest]:
-        """Convert the parsed information to a doctest."""
+        """Convert the parsed information to a doctest.
+
+        Args:
+            path (Path): Path to the source file for error reporting.
+
+        Returns:
+            tuple[str, doctest.DocTest]: A tuple of the test name and the corresponding doctest object.
+
+        """
         return (
             self.name,
             doctest.DocTestParser().get_doctest(
@@ -43,11 +51,12 @@ class Parsed(NamedTuple):
 class PyiModule(pytest.Module):
     """Custom pytest Module for collecting doctests from .pyi files."""
 
+    @override
     def collect(self) -> Iterator[pytest.Item]:
         """Collect all doctests from the .pyi file.
 
-        Yields:
-            pytest.Item: pytest.Function items for each doctest.
+        Returns:
+            Iterator[pytest.Item]: An iterator of pytest items to be executed.
 
         """
         return (
@@ -55,7 +64,7 @@ class PyiModule(pytest.Module):
             .map(lambda parsed: parsed.to_doctest(self.path))
             .filter_star(lambda _, test: bool(test.examples))
             .map_star(
-                lambda name, test: pytest.Function.from_parent(  # type: ignore[arg-type]
+                lambda name, test: pytest.Function.from_parent(  # pyright: ignore[reportUnknownMemberType]
                     name=name,
                     parent=self,
                     callobj=partial(_run_doctest, test),
@@ -100,7 +109,7 @@ def pytest_collect_file(
     if file_path.suffix.lower() != ".pyi":
         return None
 
-    return PyiModule.from_parent(parent=parent, path=file_path)  # type: ignore[arg-type]
+    return PyiModule.from_parent(parent=parent, path=file_path)  # pyright: ignore[reportUnknownMemberType]
 
 
 def _extract_doctests_from_ast(file_path: Path) -> pc.Iter[Parsed]:
@@ -116,23 +125,27 @@ def _extract_doctests_from_ast(file_path: Path) -> pc.Iter[Parsed]:
     )
 
     return module_tests.chain(
-        pc.Iter(tree.unwrap().body)
+        pc
+        .Iter(tree.unwrap().body)
         .filter(_is_def)
-        .flat_map(lambda node: _recurse_extract(node))
+        .flat_map(_recurse_extract)
         .map_star(Parsed)
     )
 
 
 def _get_tree(file_path: Path) -> pc.Result[ast.Module, None]:
     try:
-        return pc.Ok(ast.parse(file_path.read_text(), filename=str(file_path)))
+        return pc.Ok(
+            ast.parse(file_path.read_text(encoding="utf-8"), filename=str(file_path))
+        )
     except SyntaxError:
         return pc.Err(None)
 
 
 def _extract_markdown_code_blocks(docstring: str) -> str:
     return (
-        pc.Iter(MARKDOWN_BLOCK.findall(docstring))
+        pc
+        .Iter(MARKDOWN_BLOCK.findall(docstring))
         .then_some()
         .map(lambda m: m.join("\n"))
         .unwrap_or(docstring)
@@ -147,7 +160,8 @@ def _recurse_extract(node: IsDef, prefix: str = "") -> Iterator[tuple[str, str, 
         yield (full_name, docstring, node.lineno)
     if isinstance(node, ast.ClassDef):
         yield from (
-            pc.Iter(node.body)
+            pc
+            .Iter(node.body)
             .filter(_is_def)
             .flat_map(lambda n: _recurse_extract(n, f"{full_name}."))
         )
@@ -155,10 +169,11 @@ def _recurse_extract(node: IsDef, prefix: str = "") -> Iterator[tuple[str, str, 
 
 def _run_doctest(dtest: doctest.DocTest) -> None:
     runner = doctest.DocTestRunner()
-    runner.run(dtest)
+    _ = runner.run(dtest)
     if runner.failures:
         failure_msgs = (
-            pc.Iter(dtest.examples)
+            pc
+            .Iter(dtest.examples)
             .enumerate()
             .filter_star(lambda _, ex: ex.exc_msg is not None)
             .map_star(lambda _, ex: f"Line {ex.lineno}: {ex.source.strip()}")
