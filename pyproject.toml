@@ -20,19 +20,28 @@
     requires      = ["uv_build>=0.9.18"]
 [tool.ruff]
     lint.ignore = [
+        "A001",
+        "A004",
         "C417",
         "COM812",
         "COM812",
+        "CPY001",
         "D401",
         "E501",
         "FIX002",
+        "PD003",
         "PLC0415",
-        "PYI021",
+        "PLC1901",
+        "PLC2801",
+        "PLR0904",
+        "PLR2004",
         "S101",
-        "S603",
+        "S102",
+        "S404",
         "S608",
         "SLF001",
         "T201",
+        "T203",
         "TC003",
         "TC006",
         "TD002",
@@ -40,10 +49,29 @@
         "TID252",
     ]
     lint.select = ["ALL"]
+    preview = true
     [tool.ruff.format]
         docstring-code-format = true
-
-[dependency-groups]
-    dev = ["pytest>=9.0.2", "rich>=14.2.0", "ruff>=0.14.9"]
     [tool.ruff.lint.pydocstyle]
         convention = "google"
+    [tool.ruff.lint.per-file-ignores]
+        "src/pql/sql/_code_gen/*.py" = [
+            "A002",
+            "ANN401",
+            "FBT001",
+            "FBT002",
+            "PLR0913",
+            "PLW1641",
+        ]
+        "t.py" = ["ANN201", "D100", "D101", "D103"]
+        "tests/*" = ["D100", "D101", "D102", "D103", "D104", "DTZ001", "FBT001"]
+    [tool.ruff.lint.isort]
+        combine-as-imports = true
+
+[dependency-groups]
+    dev = [
+    "basedpyright>=1.39.0",
+    "pytest>=9.0.2",
+    "rich>=14.2.0",
+    "ruff>=0.14.9",
+]
