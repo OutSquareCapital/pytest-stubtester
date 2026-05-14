@@ -8,8 +8,8 @@ from functools import partial
 from pathlib import Path
 from typing import NamedTuple, TypeIs, override
 
-import pyochain as pc
 import pytest
+from pyochain import Err, Iter, Ok, Option
 
 type IsDef = ast.FunctionDef | ast.ClassDef
 COMMAND = "--stubs"
@@ -39,8 +39,7 @@ class Parsed(NamedTuple):
 
         def _extract_markdown_code_blocks() -> str:
             return (
-                pc
-                .Iter(MARKDOWN_BLOCK.findall(self.docstring))
+                Iter(MARKDOWN_BLOCK.findall(self.docstring))
                 .then(lambda m: m.join("\n"))
                 .unwrap_or(self.docstring)
             )
@@ -69,35 +68,34 @@ class PyiModule(pytest.Module):
 
         """
 
-        def _extract_doctests_from_ast() -> pc.Iter[Parsed]:
+        def _extract_doctests_from_ast() -> Iter[Parsed]:
             try:
-                tree_res = pc.Ok(
+                tree_res = Ok(
                     ast.parse(
                         self.path.read_text(encoding="utf-8"),
                         filename=str(self.path),
                     )
                 )
             except SyntaxError:
-                tree_res = pc.Err(None)
+                tree_res = Err(None)
 
             match tree_res:
-                case pc.Ok(tree):
+                case Ok(tree):
                     module_doc = _get_doc(tree)
                     module_tests = (
-                        pc.Iter.once(Parsed(self.path.stem, module_doc.unwrap(), 1))
+                        Iter.once(Parsed(self.path.stem, module_doc.unwrap(), 1))
                         if module_doc.is_some()
-                        else pc.Iter[Parsed].new()
+                        else Iter[Parsed].new()
                     )
 
                     return module_tests.chain(
-                        pc
-                        .Iter(tree.body)
+                        Iter(tree.body)
                         .filter(_is_def)
                         .flat_map(_recurse_extract)
                         .map_star(Parsed)
                     )
                 case _:
-                    return pc.Iter[Parsed].new()
+                    return Iter[Parsed].new()
 
         return (
             _extract_doctests_from_ast()
@@ -157,11 +155,14 @@ def _recurse_extract(node: IsDef, prefix: str = "") -> Iterator[tuple[str, str, 
         yield (full_name, docstring.unwrap(), node.lineno)
     if isinstance(node, ast.ClassDef):
         yield from (
-            pc
-            .Iter(node.body)
+            Iter(node.body)
             .filter(_is_def)
             .flat_map(lambda n: _recurse_extract(n, f"{full_name}."))
         )
+
+
+def _get_doc(node: ast.FunctionDef | ast.ClassDef | ast.Module) -> Option[str]:
+    return Option(ast.get_docstring(node)).filter(lambda d: ">>>" in d)
 
 
 def _run_doctest(dtest: doctest.DocTest) -> None:
@@ -169,8 +170,7 @@ def _run_doctest(dtest: doctest.DocTest) -> None:
     _ = runner.run(dtest)
     if runner.failures:
         failure_msgs = (
-            pc
-            .Iter(dtest.examples)
+            Iter(dtest.examples)
             .enumerate()
             .filter_star(lambda _, ex: ex.exc_msg is not None)
             .map_star(lambda _, ex: f"Line {ex.lineno}: {ex.source.strip()}")
@@ -181,7 +181,3 @@ def _run_doctest(dtest: doctest.DocTest) -> None:
 
 def _is_def(n: object) -> TypeIs[IsDef]:
     return isinstance(n, ast.FunctionDef | ast.ClassDef)
-
-
-def _get_doc(node: ast.FunctionDef | ast.ClassDef | ast.Module) -> pc.Option[str]:
-    return pc.Option(ast.get_docstring(node)).filter(lambda d: ">>>" in d)
