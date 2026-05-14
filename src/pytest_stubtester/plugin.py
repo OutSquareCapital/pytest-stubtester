@@ -6,54 +6,17 @@ import re
 from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
-from typing import NamedTuple, TypeIs, override
+from typing import TypeIs, override
 
 import pytest
-from pyochain import Err, Iter, Ok, Option
+from pyochain import Iter, Option, Some
 
 type IsDef = ast.FunctionDef | ast.ClassDef
 COMMAND = "--stubs"
 MARKDOWN_BLOCK = re.compile(r"```python\n(.*?)\n```")
 
-
-class Parsed(NamedTuple):
-    """Parsed doctest information."""
-
-    name: str
-    """Module or object name."""
-    docstring: str
-    """Docstring containing the doctest."""
-    lineno: int
-    """Line number in the source file."""
-
-    def to_doctest(self, path: Path) -> tuple[str, doctest.DocTest]:
-        """Convert the parsed information to a doctest.
-
-        Args:
-            path (Path): Path to the source file for error reporting.
-
-        Returns:
-            tuple[str, doctest.DocTest]: A tuple of the test name and the corresponding doctest object.
-
-        """
-
-        def _extract_markdown_code_blocks() -> str:
-            return (
-                Iter(MARKDOWN_BLOCK.findall(self.docstring))
-                .then(lambda m: m.join("\n"))
-                .unwrap_or(self.docstring)
-            )
-
-        return (
-            self.name,
-            doctest.DocTestParser().get_doctest(
-                _extract_markdown_code_blocks(),
-                globs={},
-                name=self.name,
-                filename=str(path),
-                lineno=self.lineno,
-            ),
-        )
+type Parsed = tuple[str, str, int]
+"""Parsed doctest information as a tuple of name (str), docstring (str), and line number (int)."""
 
 
 class PyiModule(pytest.Module):
@@ -67,47 +30,9 @@ class PyiModule(pytest.Module):
             Iterator[pytest.Item]: An iterator of pytest items to be executed.
 
         """
-
-        def _extract_doctests_from_ast() -> Iter[Parsed]:
-            try:
-                tree_res = Ok(
-                    ast.parse(
-                        self.path.read_text(encoding="utf-8"),
-                        filename=str(self.path),
-                    )
-                )
-            except SyntaxError:
-                tree_res = Err(None)
-
-            match tree_res:
-                case Ok(tree):
-                    module_doc = _get_doc(tree)
-                    module_tests = (
-                        Iter.once(Parsed(self.path.stem, module_doc.unwrap(), 1))
-                        if module_doc.is_some()
-                        else Iter[Parsed].new()
-                    )
-
-                    return module_tests.chain(
-                        Iter(tree.body)
-                        .filter(_is_def)
-                        .flat_map(_recurse_extract)
-                        .map_star(Parsed)
-                    )
-                case _:
-                    return Iter[Parsed].new()
-
-        return (
-            _extract_doctests_from_ast()
-            .map(lambda parsed: parsed.to_doctest(self.path))
-            .filter_star(lambda _, test: bool(test.examples))
-            .map_star(
-                lambda name, test: pytest.Function.from_parent(  # pyright: ignore[reportUnknownMemberType]
-                    name=name,
-                    parent=self,
-                    callobj=partial(_run_doctest, test),
-                )
-            )
+        add_test = partial(pytest.Function.from_parent, self)  # pyright: ignore[reportUnknownMemberType]
+        return _collect_all_tests(self.path).map_star(
+            lambda name, test: add_test(name=name, callobj=partial(_run_doctest, test))
         )
 
 
@@ -147,18 +72,67 @@ def pytest_collect_file(
     return PyiModule.from_parent(parent=parent, path=file_path)  # pyright: ignore[reportUnknownMemberType]
 
 
-def _recurse_extract(node: IsDef, prefix: str = "") -> Iterator[tuple[str, str, int]]:
+def _collect_all_tests(path: Path) -> Iter[tuple[str, doctest.DocTest]]:
+    def _extract_doctests_from_ast() -> Iter[Parsed]:
+        txt = path.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(txt, filename=str(path))
+        except SyntaxError:
+            return Iter[Parsed].new()
+
+        match _get_doc(tree):
+            case Some(doc):
+                module_tests = Iter.once((path.stem, doc, 1))
+            case _:
+                module_tests: Iter[Parsed] = Iter(())
+
+        return module_tests.chain(
+            Iter(tree.body).filter(_is_def).flat_map(_extract_all_docs)
+        )
+
+    return (
+        _extract_doctests_from_ast()
+        .map_star(lambda name, doc, lineno: _to_doctest(name, doc, lineno, path))
+        .filter_star(lambda _, test: bool(test.examples))
+    )
+
+
+def _to_doctest(
+    name: str, docstring: str, lineno: int, path: Path
+) -> tuple[str, doctest.DocTest]:
+    tst = doctest.DocTestParser().get_doctest(
+        _extract_markdown_code_blocks(docstring),
+        globs={},
+        name=name,
+        filename=str(path),
+        lineno=lineno,
+    )
+
+    return name, tst
+
+
+def _extract_markdown_code_blocks(docstring: str) -> str:
+    return (
+        Iter(MARKDOWN_BLOCK.findall(docstring))
+        .then(lambda m: m.join("\n"))
+        .unwrap_or(docstring)
+    )
+
+
+def _extract_all_docs(node: IsDef, prefix: str = "") -> Iterator[Parsed]:
     docstring = _get_doc(node)
     full_name = f"{prefix}{node.name}" if prefix else node.name
-
     if docstring.is_some():
         yield (full_name, docstring.unwrap(), node.lineno)
-    if isinstance(node, ast.ClassDef):
-        yield from (
-            Iter(node.body)
-            .filter(_is_def)
-            .flat_map(lambda n: _recurse_extract(n, f"{full_name}."))
-        )
+    match node:
+        case ast.ClassDef():
+            yield from (
+                Iter(node.body)
+                .filter(_is_def)
+                .flat_map(lambda n: _extract_all_docs(n, f"{full_name}."))
+            )
+        case _:
+            return
 
 
 def _get_doc(node: ast.FunctionDef | ast.ClassDef | ast.Module) -> Option[str]:
@@ -176,7 +150,8 @@ def _run_doctest(dtest: doctest.DocTest) -> None:
             .map_star(lambda _, ex: f"Line {ex.lineno}: {ex.source.strip()}")
             .join("\n")
         )
-        pytest.fail(f"Doctest failed: {runner.failures} failures\n{failure_msgs}")
+        msg = f"Doctest failed: {runner.failures} failures\n{failure_msgs}"
+        pytest.fail(msg)
 
 
 def _is_def(n: object) -> TypeIs[IsDef]:
