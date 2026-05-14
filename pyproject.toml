@@ -3,7 +3,7 @@
     description     = "Pytest plugin for discovering and running doctests from Python stub files (.pyi)."
     name            = "pytest-stubtester"
     readme          = "README.md"
-    requires-python = ">=3.12"
+    requires-python = ">=3.13"
     version         = "0.5.0"
 
     [project.entry-points.pytest11]
@@ -68,11 +68,13 @@
     [tool.ruff.lint.isort]
         combine-as-imports = true
 
+[tool.pyrefly]
+    preset = "strict"
 [dependency-groups]
     dev = [
-    "basedpyright>=1.39.0",
-    "pytest>=9.0.2",
-    "rich>=14.2.0",
-    "ruff>=0.14.9",
-    "sdsort>=0.5.0",
-]
+        "basedpyright>=1.39.0",
+        "pytest>=9.0.2",
+        "rich>=14.2.0",
+        "ruff>=0.14.9",
+        "sdsort>=0.5.0",
+    ]

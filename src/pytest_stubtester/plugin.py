@@ -1,5 +1,7 @@
 """Pytest plugin for discovering and running doctests from .pyi stub files."""
 
+from __future__ import annotations
+
 import ast
 import doctest
 import re
