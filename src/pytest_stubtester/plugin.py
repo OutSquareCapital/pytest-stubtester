@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TypeIs, override
 
 import pytest
-from pyochain import Iter, Option, Some
+from pyochain import Iter, Null, Option, Some, option
 
 type IsDef = ast.FunctionDef | ast.ClassDef
 COMMAND = "--stubs"
@@ -80,12 +80,12 @@ def _collect_all_tests(path: Path) -> Iter[tuple[str, doctest.DocTest]]:
         try:
             tree = ast.parse(txt, filename=str(path))
         except SyntaxError:
-            return Iter[Parsed].new()
+            return Iter(())
 
         match _get_doc(tree):
             case Some(doc):
                 module_tests = Iter.once((path.stem, doc, 1))
-            case _:
+            case Null():
                 module_tests: Iter[Parsed] = Iter(())
 
         return module_tests.chain(
@@ -138,7 +138,7 @@ def _extract_all_docs(node: IsDef, prefix: str = "") -> Iterator[Parsed]:
 
 
 def _get_doc(node: ast.FunctionDef | ast.ClassDef | ast.Module) -> Option[str]:
-    return Option(ast.get_docstring(node)).filter(lambda d: ">>>" in d)
+    return option(ast.get_docstring(node)).filter(lambda d: ">>>" in d)
 
 
 def _run_doctest(dtest: doctest.DocTest) -> None:
