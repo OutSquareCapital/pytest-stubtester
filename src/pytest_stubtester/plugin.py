@@ -32,7 +32,7 @@ class PyiModule(pytest.Module):
             Iterator[pytest.Item]: An iterator of pytest items to be executed.
 
         """
-        add_test = partial(pytest.Function.from_parent, self)  # pyright: ignore[reportUnknownMemberType]
+        add_test = partial(pytest.Function.from_parent, self)
         return _collect_all_tests(self.path).map_star(
             lambda name, test: add_test(name=name, callobj=partial(_run_doctest, test))
         )
@@ -71,7 +71,7 @@ def pytest_collect_file(
     if not parent.config.getoption(COMMAND) or file_path.suffix.lower() != ".pyi":
         return None
 
-    return PyiModule.from_parent(parent=parent, path=file_path)  # pyright: ignore[reportUnknownMemberType]
+    return PyiModule.from_parent(parent=parent, path=file_path)
 
 
 def _collect_all_tests(path: Path) -> Iter[tuple[str, doctest.DocTest]]:
@@ -88,7 +88,9 @@ def _collect_all_tests(path: Path) -> Iter[tuple[str, doctest.DocTest]]:
             case Null():
                 module_tests: Iter[Parsed] = Iter(())
 
+        # pyrefly: ignore [unbound-name]
         return module_tests.chain(
+            # pyrefly: ignore [bad-argument-type]
             Iter(tree.body).filter(_is_def).flat_map(_extract_all_docs)
         )
 
@@ -131,6 +133,7 @@ def _extract_all_docs(node: IsDef, prefix: str = "") -> Iterator[Parsed]:
             yield from (
                 Iter(node.body)
                 .filter(_is_def)
+                # pyrefly: ignore [bad-argument-type]
                 .flat_map(lambda n: _extract_all_docs(n, f"{full_name}."))
             )
         case _:

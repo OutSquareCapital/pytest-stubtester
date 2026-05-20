@@ -1,13 +1,16 @@
 [project]
-    dependencies    = ["pyochain>=0.5.52", "pytest>=9.0.2"]
+    dependencies    = ["pyochain>=0.19.0", "pytest>=9.0.2"]
     description     = "Pytest plugin for discovering and running doctests from Python stub files (.pyi)."
     name            = "pytest-stubtester"
     readme          = "README.md"
     requires-python = ">=3.13"
-    version         = "0.5.0"
+    version         = "0.6.0"
 
     [project.entry-points.pytest11]
         stubtester = "pytest_stubtester.plugin"
+
+[dependency-groups]
+    dev = ["pyrefly>=1.0.0", "pytest>=9.0.2", "ruff>=0.14.9", "sdsort>=0.5.0"]
 
 [tool.uv]
     package = true
@@ -70,11 +73,3 @@
 
 [tool.pyrefly]
     preset = "strict"
-[dependency-groups]
-    dev = [
-        "basedpyright>=1.39.0",
-        "pytest>=9.0.2",
-        "rich>=14.2.0",
-        "ruff>=0.14.9",
-        "sdsort>=0.5.0",
-    ]
