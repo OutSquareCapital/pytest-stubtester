@@ -1,5 +1,5 @@
 [project]
-    dependencies    = ["pyochain>=0.19.0", "pytest>=9.0.2"]
+    dependencies    = ["pyochain>=0.22.0", "pytest>=9.0.2"]
     description     = "Pytest plugin for discovering and running doctests from Python stub files (.pyi)."
     name            = "pytest-stubtester"
     readme          = "README.md"
