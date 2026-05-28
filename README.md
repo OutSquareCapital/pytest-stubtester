@@ -58,16 +58,17 @@ Create a `.pyi` file with doctests:
 # math_helpers.pyi
 def add(a: int, b: int) -> int:
     """Add two numbers.
-    
+
     >>> add(2, 3)
     5
     >>> add(-1, 1)
     0
     """
 
+
 def multiply(a: int, b: int) -> int:
     """Multiply two numbers.
-    
+
     >>> multiply(3, 4)
     12
     """

@@ -54,10 +54,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 @pytest.hookimpl(trylast=True)
-def pytest_collect_file(
-    file_path: Path,
-    parent: pytest.Collector,
-) -> PyiModule | None:
+def pytest_collect_file(file_path: Path, parent: pytest.Collector) -> PyiModule | None:
     """Collect .pyi files for doctest execution.
 
     Args:

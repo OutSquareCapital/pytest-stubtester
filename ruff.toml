@@ -1,0 +1,50 @@
+
+lint.ignore = [
+    "A001",
+    "A004",
+    "C417",
+    "COM812",
+    "COM812",
+    "CPY001",
+    "D401",
+    "E501",
+    "FIX002",
+    "PD003",
+    "PLC0415",
+    "PLC1901",
+    "PLC2801",
+    "PLR0904",
+    "PLR2004",
+    "S101",
+    "S102",
+    "S404",
+    "S608",
+    "SLF001",
+    "T201",
+    "T203",
+    "TC003",
+    "TC006",
+    "TD002",
+    "TD003",
+    "TID252",
+]
+lint.select = ["ALL"]
+preview = true
+[format]
+    docstring-code-format = true
+    preview               = true
+[lint.pydocstyle]
+    convention = "google"
+[lint.per-file-ignores]
+    "src/pql/sql/_code_gen/*.py" = [
+        "A002",
+        "ANN401",
+        "FBT001",
+        "FBT002",
+        "PLR0913",
+        "PLW1641",
+    ]
+    "t.py" = ["ANN201", "D100", "D101", "D103"]
+    "tests/*" = ["D100", "D101", "D102", "D103", "D104", "DTZ001", "FBT001"]
+[lint.isort]
+    combine-as-imports = true
