@@ -1,9 +1,11 @@
 """Tests for the pytest-stubtester plugin."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
-import pyochain as pc
 import pytest
+from pyochain import Iter
 
 import pytest_stubtester as pst
 
@@ -175,7 +177,7 @@ def test_real_success_examples() -> None:
     success_dir = Path("tests", "examples", "success")
     assert success_dir.exists()
 
-    assert pc.Iter(success_dir.glob("*.pyi")).length() > 0, (
+    assert Iter(success_dir.glob("*.pyi")).count() > 0, (
         "Should have .pyi test files in success/"
     )
 
@@ -185,6 +187,6 @@ def test_real_failure_examples() -> None:
     failures_dir = Path("tests", "examples", "failures")
     assert failures_dir.exists()
 
-    assert pc.Iter(failures_dir.glob("*.pyi")).length() > 0, (
+    assert Iter(failures_dir.glob("*.pyi")).count() > 0, (
         "Should have .pyi test files in failures/"
     )

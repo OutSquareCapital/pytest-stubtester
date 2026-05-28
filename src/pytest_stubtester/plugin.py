@@ -5,13 +5,15 @@ from __future__ import annotations
 import ast
 import doctest
 import re
-from collections.abc import Iterator
 from functools import partial
-from pathlib import Path
-from typing import TypeIs, override
+from typing import TYPE_CHECKING, TypeIs, override
 
 import pytest
 from pyochain import Iter, Null, Option, Some, option
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
 
 type IsDef = ast.FunctionDef | ast.ClassDef
 COMMAND = "--stubs"
