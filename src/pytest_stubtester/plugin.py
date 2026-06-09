@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
+    from pyochain.abc import PyoIterator
+
 type IsDef = ast.FunctionDef | ast.ClassDef
 COMMAND = "--stubs"
 MARKDOWN_BLOCK = re.compile(r"```python\n(.*?)\n```")
@@ -35,8 +37,17 @@ class PyiModule(pytest.Module):
 
         """
         add_test = partial(pytest.Function.from_parent, self)
-        return _collect_all_tests(self.path).map_star(
-            lambda name, test: add_test(name=name, callobj=partial(_run_doctest, test))
+        return (
+            _extract_doctests_from_ast(self.path)
+            .map_star(
+                lambda name, doc, lineno: _to_doctest(name, doc, lineno, self.path)
+            )
+            .filter_star(lambda _, test: bool(test.examples))
+            .map_star(
+                lambda name, test: add_test(
+                    name=name, callobj=partial(_run_doctest, test)
+                )
+            )
         )
 
 
@@ -73,30 +84,23 @@ def pytest_collect_file(file_path: Path, parent: pytest.Collector) -> PyiModule 
     return PyiModule.from_parent(parent=parent, path=file_path)
 
 
-def _collect_all_tests(path: Path) -> Iter[tuple[str, doctest.DocTest]]:
-    def _extract_doctests_from_ast() -> Iter[Parsed]:
-        txt = path.read_text(encoding="utf-8")
-        try:
-            tree = ast.parse(txt, filename=str(path))
-        except SyntaxError:
-            return Iter(())
+def _extract_doctests_from_ast(path: Path) -> PyoIterator[Parsed]:
+    txt = path.read_text(encoding="utf-8")
+    try:
+        tree = ast.parse(txt, filename=str(path))
+    except SyntaxError:
+        return Iter(())
 
-        match _get_doc(tree):
-            case Some(doc):
-                module_tests = Iter.once((path.stem, doc, 1))
-            case Null():
-                module_tests: Iter[Parsed] = Iter(())
+    match _get_doc(tree):
+        case Some(doc):
+            module_tests = Iter.once((path.stem, doc, 1))
+        case Null():
+            module_tests: PyoIterator[Parsed] = Iter(())
 
-        # pyrefly: ignore [unbound-name]
-        return module_tests.chain(
-            # pyrefly: ignore [bad-argument-type]
-            Iter(tree.body).filter(_is_def).flat_map(_extract_all_docs)
-        )
-
-    return (
-        _extract_doctests_from_ast()
-        .map_star(lambda name, doc, lineno: _to_doctest(name, doc, lineno, path))
-        .filter_star(lambda _, test: bool(test.examples))
+    # pyrefly: ignore [unbound-name]
+    return module_tests.chain(
+        # pyrefly: ignore [bad-argument-type]
+        Iter(tree.body).filter(_is_def).flat_map(_extract_all_docs)
     )
 
 
@@ -149,9 +153,8 @@ def _run_doctest(dtest: doctest.DocTest) -> None:
     if runner.failures:
         failure_msgs = (
             Iter(dtest.examples)
-            .enumerate()
-            .filter_star(lambda _, ex: ex.exc_msg is not None)
-            .map_star(lambda _, ex: f"Line {ex.lineno}: {ex.source.strip()}")
+            .filter(lambda ex: ex.exc_msg is not None)
+            .map(lambda ex: f"Line {ex.lineno}: {ex.source.strip()}")
             .join("\n")
         )
         msg = f"Doctest failed: {runner.failures} failures\n{failure_msgs}"
