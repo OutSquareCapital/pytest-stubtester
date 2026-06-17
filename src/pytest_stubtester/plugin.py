@@ -99,7 +99,6 @@ def _extract_doctests_from_ast(path: Path) -> PyoIterator[Parsed]:
 
     # pyrefly: ignore [unbound-name]
     return module_tests.chain(
-        # pyrefly: ignore [bad-argument-type]
         Iter(tree.body).filter(_is_def).flat_map(_extract_all_docs)
     )
 
@@ -136,7 +135,6 @@ def _extract_all_docs(node: IsDef, prefix: str = "") -> Iterator[Parsed]:
             yield from (
                 Iter(node.body)
                 .filter(_is_def)
-                # pyrefly: ignore [bad-argument-type]
                 .flat_map(lambda n: _extract_all_docs(n, f"{full_name}."))
             )
         case _:
