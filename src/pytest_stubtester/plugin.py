@@ -88,19 +88,20 @@ def _extract_doctests_from_ast(path: Path) -> PyoIterator[Parsed]:
     txt = path.read_text(encoding="utf-8")
     try:
         tree = ast.parse(txt, filename=str(path))
+        all_docs = Iter(tree.body).filter(_is_def).flat_map(_extract_all_docs)
+        return _get_module_tests(tree, path).chain(all_docs)
+
     except SyntaxError:
         return Iter(())
 
+
+# pyrefly: ignore [bad-return]
+def _get_module_tests(tree: ast.Module, path: Path) -> PyoIterator[Parsed]:
     match _get_doc(tree):
         case Some(doc):
-            module_tests = Iter.once((path.stem, doc, 1))
+            return Iter.once((path.stem, doc, 1))
         case Null():
-            module_tests: PyoIterator[Parsed] = Iter(())
-
-    # pyrefly: ignore [unbound-name]
-    return module_tests.chain(
-        Iter(tree.body).filter(_is_def).flat_map(_extract_all_docs)
-    )
+            return Iter(())
 
 
 def _to_doctest(
