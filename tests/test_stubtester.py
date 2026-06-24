@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from pyochain import Iter
 
 import pytest_stubtester as pst
 
@@ -172,21 +171,76 @@ def function_with_docstring_no_tests(x: int) -> int:
     assert result.ret == no_tests_collected
 
 
-def test_real_success_examples() -> None:
-    """Real example files in tests/examples/success should exist."""
-    success_dir = Path("tests", "examples", "success")
-    assert success_dir.exists()
-
-    assert Iter(success_dir.glob("*.pyi")).count() > 0, (
-        "Should have .pyi test files in success/"
+def test_success_examples_all_pass(pytester: pytest.Pytester) -> None:
+    """All .pyi files in tests/examples/success should pass."""
+    result = pytester.runpytest(
+        pst.COMMAND, "-v", str(Path(__file__).parent / "examples" / "success")
     )
+    assert result.ret == 0
 
 
-def test_real_failure_examples() -> None:
-    """Real example files in tests/examples/failures should exist."""
-    failures_dir = Path("tests", "examples", "failures")
-    assert failures_dir.exists()
-
-    assert Iter(failures_dir.glob("*.pyi")).count() > 0, (
-        "Should have .pyi test files in failures/"
+def test_failure_examples_have_failures(pytester: pytest.Pytester) -> None:
+    """tests/examples/failures should contain failing doctests."""
+    result = pytester.runpytest(
+        pst.COMMAND, "-v", str(Path(__file__).parent / "examples" / "failures")
     )
+    assert result.ret != 0
+
+
+def test_class_doctest(pytester: pytest.Pytester) -> None:
+    """Class-level docstring with doctests should be collected and run."""
+    _ = pytester.makefile(
+        ".pyi",
+        cls_test="""
+class MyClass:
+    \"\"\"My class.
+
+    >>> 1 + 1
+    2
+    \"\"\"
+""",
+    )
+    result = pytester.runpytest(pst.COMMAND, "-v")
+    assert result.ret == 0
+    result.stdout.fnmatch_lines(["*cls_test.pyi::MyClass*PASSED*"])
+
+
+def test_class_method_doctest(pytester: pytest.Pytester) -> None:
+    """Method inside a class should be collected as ClassName.method_name."""
+    _ = pytester.makefile(
+        ".pyi",
+        cls_method="""
+class MyClass:
+    def my_method(self) -> int:
+        \"\"\"Method.
+
+        >>> 3 + 3
+        6
+        \"\"\"
+""",
+    )
+    result = pytester.runpytest(pst.COMMAND, "-v")
+    assert result.ret == 0
+    result.stdout.fnmatch_lines(["*cls_method.pyi::MyClass.my_method*PASSED*"])
+
+
+def test_markdown_fence_doctest(pytester: pytest.Pytester) -> None:
+    """Doctests inside markdown code fences should be extracted and run."""
+    _ = pytester.makefile(
+        ".pyi",
+        markdown="""
+def foo() -> int:
+    \"\"\"Function with markdown fence.
+
+    ```python
+    >>> 1 + 1
+    2
+    >>> 2 + 2
+    4
+    ```
+    \"\"\"
+""",
+    )
+    result = pytester.runpytest(pst.COMMAND, "-v")
+    assert result.ret == 0
+    result.stdout.fnmatch_lines(["*markdown.pyi::foo*PASSED*"])
