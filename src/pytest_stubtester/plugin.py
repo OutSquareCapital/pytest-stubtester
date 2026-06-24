@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 type IsDef = ast.FunctionDef | ast.ClassDef
 type HasDoc = IsDef | ast.Module
 COMMAND = "--stubs"
-MARKDOWN_BLOCK = re.compile(r"```python\n(.*?)\n```")
+MARKDOWN_BLOCK = re.compile(r"```python\n(.*?)\n```", re.DOTALL)
 """Pattern to extract Python code blocks from Markdown-formatted docstrings.
 
 Example:
@@ -118,15 +118,15 @@ def _to_doctest(
 
 def _extract_all_docs(node: IsDef, prefix: str = "") -> PyoIterator[Parsed]:
     full_name = f"{prefix}{node.name}" if prefix else node.name
-    match _get_doc(node, full_name, node.lineno):
-        case ast.ClassDef() as class_node:
-            return class_node.chain(
+    match node:
+        case ast.ClassDef():
+            return _get_doc(node, full_name, node.lineno).chain(
                 Iter(node.body)
                 .filter(_is_def)
                 .flat_map(lambda n: _extract_all_docs(n, f"{full_name}."))
             )
-        case _ as def_node:
-            return def_node
+        case _:
+            return _get_doc(node, full_name, node.lineno)
 
 
 def _get_doc(node: HasDoc, name: str, lineno: int) -> PyoIterator[Parsed]:
