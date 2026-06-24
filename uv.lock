@@ -114,7 +114,7 @@ wheels = [
 
 [[package]]
 name = "pytest-stubtester"
-version = "0.7.0"
+version = "0.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "pyochain" },
@@ -124,23 +124,21 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "pyrefly" },
-    { name = "pytest" },
     { name = "ruff" },
     { name = "sdsort" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "pyochain", specifier = ">=0.25.0" },
-    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pyochain", specifier = ">=0.26.0" },
+    { name = "pytest", specifier = ">=9.1.1" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pyrefly", specifier = ">=1.1.0" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "ruff", specifier = ">=0.14.9" },
-    { name = "sdsort", specifier = ">=0.5.0" },
+    { name = "pyrefly", specifier = ">=1.1.1" },
+    { name = "ruff", specifier = ">=0.15.19" },
+    { name = "sdsort", specifier = ">=0.5.2" },
 ]
 
 [[package]]
