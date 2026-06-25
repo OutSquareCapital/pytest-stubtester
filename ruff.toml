@@ -20,6 +20,15 @@ preview = true
         "PLW1641",
     ]
     "t.py" = ["ANN201", "D100", "D101", "D103"]
-    "tests/*" = ["D100", "D101", "D102", "D103", "D104", "DTZ001", "FBT001"]
+    "tests/*" = [
+        "D100",
+        "D101",
+        "D102",
+        "D103",
+        "D104",
+        "DTZ001",
+        "FBT001",
+        "S101",
+    ]
 [lint.isort]
     combine-as-imports = true

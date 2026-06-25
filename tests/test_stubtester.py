@@ -174,7 +174,9 @@ def function_with_docstring_no_tests(x: int) -> int:
 def test_success_examples_all_pass(pytester: pytest.Pytester) -> None:
     """All .pyi files in tests/examples/success should pass."""
     result = pytester.runpytest(
-        pst.COMMAND, "-v", str(Path(__file__).parent / "examples" / "success")
+        pst.COMMAND,
+        "-v",
+        str(Path(__file__).parent / "examples" / "success"),
     )
     assert result.ret == 0
 
@@ -182,7 +184,9 @@ def test_success_examples_all_pass(pytester: pytest.Pytester) -> None:
 def test_failure_examples_have_failures(pytester: pytest.Pytester) -> None:
     """tests/examples/failures should contain failing doctests."""
     result = pytester.runpytest(
-        pst.COMMAND, "-v", str(Path(__file__).parent / "examples" / "failures")
+        pst.COMMAND,
+        "-v",
+        str(Path(__file__).parent / "examples" / "failures"),
     )
     assert result.ret != 0
 

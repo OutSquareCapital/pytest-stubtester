@@ -72,8 +72,8 @@ uv run pytest foo.pyi --stubs -v
 Output:
 
 ```shell
-foo.pyi::add PASSED      [ 50%]
-foo.pyi::multiply PASSED [100%]
+foo.pyi::add PASSED                                                                                                                                                                     [ 50%]
+foo.pyi::multiply PASSED
 ```
 
 ### Dependencies
