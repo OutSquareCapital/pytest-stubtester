@@ -29,11 +29,16 @@ Example:
     ```
 """
 type Parsed = tuple[str, str, int]
-"""Parsed doctest information as a tuple of name (str), docstring (str), and line number (int)."""
+"""Parsed doctest information as a tuple of:
+- name (str)
+- docstring (str)
+- line number (int)
+"""
 
 
 def collect_all_tests(
-    parent: DoctestModule, path: Path
+    parent: DoctestModule,
+    path: Path,
 ) -> Iterator[pytest.DoctestItem]:
 
     txt = path.read_text(encoding="utf-8")
@@ -46,14 +51,20 @@ def collect_all_tests(
         .filter_star(lambda _, test: bool(test.examples))
         .map_star(
             lambda name, test: pytest.DoctestItem.from_parent(
-                parent, name=name, runner=doctest.DebugRunner(), dtest=test
+                parent,
+                name=name,
+                runner=doctest.DebugRunner(),
+                dtest=test,
             ),
         )
     )
 
 
 def _to_doctest(
-    name: str, docstring: str, lineno: int, filename: str
+    name: str,
+    docstring: str,
+    lineno: int,
+    filename: str,
 ) -> tuple[str, doctest.DocTest]:
     string = _parse_docstring(docstring)
     tst = doctest.DocTestParser().get_doctest(string, {}, name, filename, lineno)

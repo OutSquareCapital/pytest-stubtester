@@ -1,32 +1,6 @@
 
 lint.ignore = [
-    "A001",
-    "A004",
-    "C417",
-    "COM812",
-    "COM812",
-    "CPY001",
-    "D401",
-    "E501",
-    "FIX002",
-    "PD003",
-    "PLC0415",
-    "PLC1901",
-    "PLC2801",
-    "PLR0904",
-    "PLR2004",
-    "PYI021",
-    "S101",
-    "S102",
-    "S404",
-    "S608",
-    "SLF001",
-    "T201",
-    "T203",
-    "TC006",
-    "TD002",
-    "TD003",
-    "TID252",
+    "CPY001", # Ignore licence header 
 ]
 lint.select = ["ALL"]
 preview = true
