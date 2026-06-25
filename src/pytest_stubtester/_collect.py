@@ -8,6 +8,7 @@ import re
 from typing import TYPE_CHECKING, TypeIs
 
 import pytest
+from _pytest.doctest import _get_runner  # noqa: PLC2701
 from pyochain import Iter, option
 
 if TYPE_CHECKING:
@@ -53,7 +54,7 @@ def collect_all_tests(
             lambda name, test: pytest.DoctestItem.from_parent(
                 parent,
                 name=name,
-                runner=doctest.DebugRunner(),
+                runner=_get_runner(verbose=False),
                 dtest=test,
             ),
         )
