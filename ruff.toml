@@ -1,6 +1,7 @@
 
 lint.ignore = [
-    "CPY001", # Ignore licence header 
+    "CPY001", # Ignore licence header
+    "PYI021", # Literally against the purpose of this plugin
 ]
 lint.select = ["ALL"]
 preview = true
