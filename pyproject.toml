@@ -4,7 +4,7 @@
     name            = "pytest-stubtester"
     readme          = "README.md"
     requires-python = ">=3.13"
-    version         = "0.7.1"
+    version         = "0.7.2"
 
     [project.entry-points.pytest11]
         stubtester = "pytest_stubtester.plugin"
