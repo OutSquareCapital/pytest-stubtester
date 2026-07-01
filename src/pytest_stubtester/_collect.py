@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, TypeIs
 
 import pytest
 from _pytest.doctest import _get_runner  # noqa: PLC2701
-from pyochain import Iter, option
+from pyochain import Iter, Vec, option
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -75,8 +75,9 @@ def _to_doctest(
 
 def _parse_docstring(docstring: str) -> str:
     return (
-        Iter(MARKDOWN_BLOCK.findall(docstring))
-        .then(lambda m: m.join("\n"))
+        Vec
+        .from_ref(MARKDOWN_BLOCK.findall(docstring))
+        .then(lambda m: m.iter().join("\n"))
         .unwrap_or(docstring)
     )
 
